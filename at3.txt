@@ -1,0 +1,119 @@
+//gRUPO: Rafael Limao, Juliano Derrete Coxinha, Felipe vorpag, Felipe Felipe, Felipe Miguel
+#include <PubSubClient.h>
+#include <WiFi.h>
+
+const char* ssid = "ai minha canela";
+const char* password = "alpaka slayer";
+const char* mqttServer = "broker.hivemq.com";
+const int mqttPort = 1883;
+//const char* mqttUser = "usuario";
+//const char* mqttPassword = "senha";
+int LED_branco = 26;
+int LED_verde = 25;
+int LED_vermelho = 27;
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+void setup() {
+    pinMode (LED_branco, OUTPUT);
+    pinMode (LED_verde, OUTPUT);
+    pinMode (LED_vermelho, OUTPUT);
+
+    Serial.begin(115200);
+    WiFi.begin(ssid, password);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print("Connecting to WiFi:");
+        Serial.println(ssid);
+    }
+
+    Serial.println("Connected to the WiFi network");
+    Serial.println("");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+    client.setServer(mqttServer, mqttPort);
+    client.setCallback(callback);
+
+    while (!client.connected()) {
+        Serial.println("Connecting to MQTT…");
+        String clientId = "ESP32Client-";
+        clientId += String(random(0xffff), HEX);
+        // if (client.connect(clientId.c_str(), mqttUser, mqttPassword )) {
+        if (client.connect(clientId.c_str())) {
+            Serial.println("connected");
+        } else {
+            Serial.print("failed with state ");
+            Serial.print(client.state());
+            delay(2000);
+        }
+    }
+
+    Serial.print("Tentando enviar a mensagem");
+    client.publish("senai/equipe1", "Hello from ESP32");
+    client.subscribe("senai/equipe1");
+
+}
+
+void callback(char* topic, byte* payload, unsigned int length){
+
+    Serial.print("Message arrived in topic: ");
+    Serial.println(topic);
+
+    char Message[length + 1];
+
+    for (unsigned int i = 0; i < length; i++) {
+        Message[i] = (char)payload[i];
+        Serial.print(Message[i]);
+    }
+    Serial.print("Message: ");
+    Serial.println(Message);
+
+    Message[length] = '\0'; 
+
+  if (strcmp(Message, "vermelho") == 0) {
+    Serial.println("Ligando LED vermelho");
+    digitalWrite(LED_vermelho, HIGH);
+  } 
+  if (strcmp(Message, "verde") == 0) {
+    Serial.println("Ligando LED verde");
+    digitalWrite(LED_verde, HIGH);
+  } 
+  if (strcmp(Message, "branco") == 0) {
+    Serial.println("Ligando LED branco");
+    digitalWrite(LED_branco, HIGH); // você nomeou LED_branco mas talvez seja azul, corrija se necessário
+  }
+
+  if (strcmp(Message, "vermelhoDesligado") == 0) {
+    Serial.println("Desligando LED vermelho");
+    digitalWrite(LED_vermelho, LOW);
+  } 
+  if (strcmp(Message, "verdeDesligado") == 0) {
+    Serial.println("Desligando LED verde");
+    digitalWrite(LED_verde, LOW);
+  } 
+  if (strcmp(Message, "brancoDesligado") == 0) {
+    Serial.println("Desligando LED branco");
+    digitalWrite(LED_branco, LOW); // você nomeou LED_branco mas talvez seja azul, corrija se necessário
+  }
+
+  if (strcmp(Message, "desligar") == 0) {
+    Serial.println("Desligando geral");
+    digitalWrite(LED_verde, LOW);
+    digitalWrite(LED_vermelho, LOW);
+    digitalWrite(LED_branco, LOW);
+  } 
+  if (strcmp(Message, "ligar") == 0) {
+    Serial.println("Ligando geral");
+    digitalWrite(LED_verde, HIGH);
+    digitalWrite(LED_vermelho, HIGH);
+    digitalWrite(LED_branco, HIGH);
+  } 
+    Serial.println();
+    Serial.println(" — — — — — — — — — — — -");
+
+}
+
+void loop() {
+    client.loop();
+}
